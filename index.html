@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pharma Voice Bot</title>
+</head>
+<body>
+    <h1>🧑‍⚕️ Pharma Voice Bot</h1>
+    <img src="pharma_bot_character.png" alt="Pharma Bot" width="200" />
+    <p>Click the button and ask your question about medications!</p>
+    <button onclick="startRecording()">🎤 Ask by Voice</button>
+    <p id="status"></p>
+    <p><strong>Bot:</strong> <span id="response"></span></p>
+
+    <script>
+        let recognition;
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+        } else if ('SpeechRecognition' in window) {
+            recognition = new SpeechRecognition();
+        } else {
+            alert("Sorry, your browser doesn't support voice recognition.");
+        }
+
+        function startRecording() {
+            if (!recognition) return;
+
+            document.getElementById('status').textContent = "🎧 Listening...";
+            recognition.lang = "en-US";
+            recognition.start();
+
+            recognition.onresult = async function(event) {
+                const userMessage = event.results[0][0].transcript;
+                document.getElementById('status').textContent = "🗣️ You asked: " + userMessage;
+
+                const responseEl = document.getElementById('response');
+                responseEl.textContent = "Thinking...";
+
+                try {
+                    const res = await fetch("https://goddid-bot.onrender.com/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: userMessage })
+                    });
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    const data = await res.json();
+                    responseEl.textContent = data.response;
+
+                    const utterance = new SpeechSynthesisUtterance(data.response);
+                    speechSynthesis.speak(utterance);
+                } catch (error) {
+                    responseEl.textContent = "Error getting answer: " + error.message;
+                }
+            };
+
+            recognition.onerror = function(event) {
+                document.getElementById('status').textContent = "❌ Error: " + event.error;
+            };
+        }
+    </script>
+</body>
+</html>
